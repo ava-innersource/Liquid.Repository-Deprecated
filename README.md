@@ -1,2 +1,2 @@
-# Liquid.Data
-Liquid Application Framework - Data access base classes and supported cartridges
+# Liquid.Repository
+Liquid Application Framework - Data repository access base classes and supported cartridges
