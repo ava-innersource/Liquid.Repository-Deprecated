@@ -1,7 +1,6 @@
 ﻿using Liquid.Core.Telemetry;
 using Liquid.Repository.Mongo.Tests.Mock;
 using Liquid.Repository.Exceptions;
-using Liquid.Repository.MongoDb.Tests.Mock;
 using MongoDB.Driver;
 using NSubstitute;
 using NUnit.Framework;
