@@ -1,4 +1,5 @@
 ﻿using Liquid.Core.Telemetry;
+using Liquid.Repository.Exceptions;
 using Liquid.Repository.Mongo.Tests.Mock;
 using MongoDB.Driver;
 using NSubstitute;
@@ -40,6 +41,10 @@ namespace Liquid.Repository.Mongo.Tests
 
             _dbDataContext = Substitute.For<IMongoDataContext>();
 
+            IClientSessionHandle handle = null;
+
+            _dbDataContext.ClientSessionHandle.Returns(handle, handle);
+
             _collection = GetCollection();
 
             _dbDataContext.Database.GetCollection<TestEntity>("TestEntities")
@@ -71,7 +76,7 @@ namespace Liquid.Repository.Mongo.Tests
         }
 
         [Test]
-        public async Task AddAsync_WhenCollectionExists_EntityAddedSuccessfuly()
+        public async Task AddAsync_WhenActionIsSuccessful_CallInsertOneMethod()
         {
 
             await _sut.AddAsync(_entity);
@@ -83,11 +88,19 @@ namespace Liquid.Repository.Mongo.Tests
             _lightTelemetry.Received().AddContext(Arg.Any<string>());
             _lightTelemetry.Received().RemoveContext(Arg.Any<string>());
         }
+        [Test]
+        public void AddAsync_WhenClientThrowsError_ThrowException()
+        {
+            _collection.When(o => o.InsertOneAsync(Arg.Any<TestEntity>())).Do((call) => throw new Exception());
+
+            var test = _sut.AddAsync(_entity);
+
+            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+        }
 
         [Test]
-        public async Task GetAllAsync_WhenCollectionExists_ReturnNoItens()
+        public async Task GetAllAsync_WhenCollectionExists_ReturnItens()
         {
-
             var result = await _sut.GetAllAsync();
 
             _dbDataContext.Database.Received(2).GetCollection<TestEntity>("TestEntities");
@@ -95,12 +108,23 @@ namespace Liquid.Repository.Mongo.Tests
             _lightTelemetry.Received().AddContext(Arg.Any<string>());
             _lightTelemetry.Received().RemoveContext(Arg.Any<string>());
 
-            Assert.IsTrue(result.Count() == 1);
+            Assert.IsTrue(result.Count() > 0);
             Assert.AreEqual(result.FirstOrDefault(), _entity);
 
         }
+
         [Test]
-        public async Task FindByIdAsync_WhenCollectionExists_ReturnNull()
+        public void GetAllAsync_WhenClientThrowsError_ThrowException()
+        {
+            _dbDataContext.Database.When(o => o.GetCollection<TestEntity>(Arg.Any<string>())).Do((call) => throw new Exception());
+
+            var test = _sut.GetAllAsync();
+
+            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+        }
+
+        [Test]
+        public async Task FindByIdAsync_WhenItemExists_ReturnItem()
         {
 
             var result = await _sut.FindByIdAsync(1234);
@@ -113,8 +137,20 @@ namespace Liquid.Repository.Mongo.Tests
             Assert.IsTrue(result == _entity);
 
         }
+
         [Test]
-        public async Task RemoveAsync_WhenCollectionExists_ReturnNull()
+        public void FindByIdAsync_WhenClientThrowsError_ThrowException()
+        {
+            _collection.When(o => o.FindAsync<TestEntity>(Arg.Any<FilterDefinition<TestEntity>>())).Do((call) => throw new Exception());
+
+            var test = _sut.FindByIdAsync(1234);
+
+            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+
+        }
+
+        [Test]
+        public async Task RemoveAsync_WhenActionIsSuccessful_CallDeleteOneMethod()
         {
             await _sut.RemoveAsync(_entity);
 
@@ -128,7 +164,17 @@ namespace Liquid.Repository.Mongo.Tests
         }
 
         [Test]
-        public async Task UpdateAsync_WhenCollectionExists_ReplaceOneAsyncExecutedSuccessfuly()
+        public void RemoveAsync_WhenClientThrowsError_ThrowException()
+        {
+            _collection.When(o => o.DeleteOneAsync(Arg.Any<FilterDefinition<TestEntity>>())).Do((call) => throw new Exception());
+
+            var test = _sut.RemoveAsync(_entity);
+
+            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+        }
+
+        [Test]
+        public async Task UpdateAsync_WhenActionIsSuccessful_CallReplaceOneMethod()
         {
 
             await _sut.UpdateAsync(_entity);
@@ -143,7 +189,17 @@ namespace Liquid.Repository.Mongo.Tests
         }
 
         [Test]
-        public async Task WhereAsync_WhenCollectionExists_ReturnNull()
+        public void UpdateAsync_WhenClientThrowsError_ThrowException()
+        {
+            _collection.When(o => o.ReplaceOneAsync(Arg.Any<FilterDefinition<TestEntity>>(), _entity, Arg.Any<ReplaceOptions>())).Do((call) => throw new Exception());
+
+            var test = _sut.UpdateAsync(_entity);
+
+            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+        }
+
+        [Test]
+        public async Task WhereAsync_WhenItensExists_ReturnItens()
         {
             var result = await _sut.WhereAsync(e => e.Id.Equals(_entity.Id));
 
@@ -152,8 +208,18 @@ namespace Liquid.Repository.Mongo.Tests
             _lightTelemetry.Received().AddContext(Arg.Any<string>());
             _lightTelemetry.Received().RemoveContext(Arg.Any<string>());
 
-            Assert.IsTrue(result.Count() == 1);
+            Assert.IsTrue(result.Count() > 0);
             Assert.AreEqual(result.FirstOrDefault(), _entity);
+        }
+
+        [Test]
+        public void WhereAsync_WhenClientThrowsError_ThrowException()
+        {
+            _collection.When(o => o.FindAsync<TestEntity>(Arg.Any<FilterDefinition<TestEntity>>())).Do((call) => throw new Exception());
+
+            var test = _sut.WhereAsync(e => e.Id.Equals(_entity.Id));
+
+            Assert.ThrowsAsync<DatabaseContextException>(() => test);
         }
     }
 }

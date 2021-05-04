@@ -2,31 +2,24 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <PackageId>Liquid.Repository.Mongo</PackageId>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageId>Liquid.Repository.EntityFramework</PackageId>
+    <Version>2.0.1-alpha</Version>
     <Authors>Avanade Brazil</Authors>
     <Company>Avanade Inc.</Company>
     <Product>Liquid - Modern Application Framework</Product>
     <Copyright>Avanade 2019</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Avanade/Liquid.Repository</PackageProjectUrl>
     <PackageIcon>logo.png</PackageIcon>
-    <Version>2.0.1-alpha</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsPackable>true</IsPackable>
     <DebugType>Full</DebugType>
-    <ProjectGuid>{D7B0D4F0-756B-4038-9DB2-0A1AD65ED72A}</ProjectGuid>
-    <Description>
-
-    </Description>
-
     <NoWarn>1701;1702;1584;1658</NoWarn>
   </PropertyGroup>
 
-  
-
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Options" Version="5.0.0" />
-    <PackageReference Include="MongoDB.Driver" Version="2.12.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.5" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,4 +32,5 @@
       <PackagePath></PackagePath>
     </None>
   </ItemGroup>
+
 </Project>

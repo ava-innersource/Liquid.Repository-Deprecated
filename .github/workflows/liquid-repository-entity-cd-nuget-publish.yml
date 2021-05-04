@@ -1,17 +1,17 @@
 # CI & CD workflow
-name: CI/CD - Liquid.Repository component for Liquid Application Framework
+name: CI/CD - Liquid.Repository.EntityFramework Cartridge for Liquid Application Framework
 
 on:
   push:
     branches: [ main ]
     paths:
-    - 'src/Liquid.Repository/**'
+    - 'src/Liquid.Repository.EntityFramework/**'
     
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened]
     paths:
-    - 'src/Liquid.Repository/**'
+    - 'src/Liquid.Repository.EntityFramework/**'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -66,7 +66,7 @@ jobs:
       run: dotnet tool install --global dotnet-reportgenerator-globaltool
 
     - name: (CI/CD) Restore dependencies
-      run: dotnet restore src/Liquid.Repository/Liquid.Repository.csproj
+      run: dotnet restore src/Liquid.Repository.EntityFramework/Liquid.Repository.EntityFramework.csproj
 
 
 
@@ -75,13 +75,13 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_EF }}
       run: |
-        dotnet sonarscanner begin /k:"Avanade_Liquid.Repository" /o:"avanade-1" /d:sonar.login="${{secrets.SONAR_TOKEN_EF}}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vstest.reportsPaths=$GITHUB_WORKSPACE/test/testresults/*.trx /d:sonar.coverageReportPaths=$GITHUB_WORKSPACE/test/coverlet/reports/SonarQube.xml
-        dotnet build src/Liquid.Repository/Liquid.Repository.csproj --configuration Release --no-restore
-        dotnet test test/Liquid.Repository.Mongo.Tests/*Tests.csproj --collect:"XPlat Code Coverage" --logger trx --results-directory $GITHUB_WORKSPACE/test/testresults
+        dotnet sonarscanner begin /k:"Avanade_Liquid.Repository.EntityFramework" /o:"avanade-1" /d:sonar.login="${{secrets.SONAR_TOKEN_EF}}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vstest.reportsPaths=$GITHUB_WORKSPACE/test/testresults/*.trx /d:sonar.coverageReportPaths=$GITHUB_WORKSPACE/test/coverlet/reports/SonarQube.xml
+        dotnet build src/Liquid.Repository.EntityFramework/Liquid.Repository.EntityFramework.csproj --configuration Release --no-restore
+        dotnet test test/Liquid.Repository.EntityFramework.Tests/*Tests.csproj --collect:"XPlat Code Coverage" --logger trx --results-directory $GITHUB_WORKSPACE/test/testresults
         reportgenerator -reports:$GITHUB_WORKSPACE/test/testresults/**/coverage.cobertura.xml -targetdir:$GITHUB_WORKSPACE/test/coverlet/reports -reporttypes:"SonarQube"
         dotnet sonarscanner end /d:sonar.login="${{secrets.SONAR_TOKEN_EF}}"
     - name: (CD) Nuget Pack & Push to Nuget.org
       if: ${{ github.event_name == 'push' }}
       run: |
-        dotnet pack --no-build --configuration Release src/Liquid.Repository/Liquid.Repository.csproj --output .
+        dotnet pack --no-build --configuration Release src/Liquid.Repository.EntityFramework/Liquid.Repository.EntityFramework.csproj --output .
         dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{secrets.PUBLISH_TO_NUGET_ORG}} --skip-duplicate
