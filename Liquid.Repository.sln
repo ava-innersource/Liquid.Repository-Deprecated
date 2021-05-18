@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{87C5D7BD-5550-4790-BEE7-B9646E16CF14}"
 	ProjectSection(SolutionItems) = preProject
 		test\CodeCoverage.runsettings = test\CodeCoverage.runsettings
+		logo.png = logo.png
 		nuget.config = nuget.config
 	EndProjectSection
 EndProject
@@ -22,6 +23,13 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Liquid.Repository.EntityFramework", "src\Liquid.Repository.EntityFramework\Liquid.Repository.EntityFramework.csproj", "{43772FB9-7321-446E-B727-80401AE61E0F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Liquid.Repository.EntityFramework.Tests", "test\Liquid.Repository.EntityFramework.Tests\Liquid.Repository.EntityFramework.Tests.csproj", "{857D686E-B7BC-4BC4-A24D-357A75BB9259}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{B194DBBC-1965-47CD-B2B1-6E12AA08DB86}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\liquid-repository-cd-nuget-publish.yml = .github\workflows\liquid-repository-cd-nuget-publish.yml
+		.github\workflows\liquid-repository-entity-cd-nuget-publish.yml = .github\workflows\liquid-repository-entity-cd-nuget-publish.yml
+		.github\workflows\liquid-repository-mongodb-cd-nuget-publish.yml = .github\workflows\liquid-repository-mongodb-cd-nuget-publish.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
