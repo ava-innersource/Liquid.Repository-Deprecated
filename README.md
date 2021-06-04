@@ -17,7 +17,7 @@ This package contains the repository subsystem of Liquid, along with several dat
 |[Liquid.Repository.EntityFramework](https://github.com/Avanade/Liquid.Repository/tree/main/src/Liquid.Repository.EntityFramework)|[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Avanade_Liquid.Repository.EntityFramework&metric=alert_status)](https://sonarcloud.io/dashboard?id=Avanade_Liquid.Repository.EntityFramework)|
 
 # Getting Started
-## This is a sample usage with MongoDb cartridge
+###This is a sample usage with MongoDb cartridge
 
 ### Implement your entity and repository using Liquid inheritance
 ```C#
