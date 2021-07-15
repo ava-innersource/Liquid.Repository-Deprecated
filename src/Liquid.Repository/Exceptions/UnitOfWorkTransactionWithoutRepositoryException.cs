@@ -8,10 +8,10 @@ namespace Liquid.Repository.Exceptions
     /// <summary>
     /// Occurs when the transaction is called before a repository method is called.
     /// </summary>
-    /// <seealso cref="Liquid.Core.Exceptions.LightException" />
+    /// <seealso cref="LiquidException" />
     [Serializable]
     [ExcludeFromCodeCoverage]
-    public class UnitofWorkTransactionWithoutRepositoryException : LightException
+    public class UnitofWorkTransactionWithoutRepositoryException : LiquidException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="UnitofWorkTransactionWithoutRepositoryException"/> class.

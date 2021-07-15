@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Liquid.Repository.Mongo.Attributes;
+using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Liquid.Repository.Mongo.Tests.Mock
@@ -10,7 +11,8 @@ namespace Liquid.Repository.Mongo.Tests.Mock
     ///     <cref>Liquid.Data.Entities.DataMappingBase{System.Int32}</cref>
     /// </seealso>
     [ExcludeFromCodeCoverage]
-    public class TestEntity : RepositoryEntity<int>
+    [Mongo("TestEntities", "id", "TestDatabase")]
+    public class TestEntity : LiquidEntity<int>
     {
         /// <summary>
         /// Gets or sets the mock title.
@@ -35,5 +37,6 @@ namespace Liquid.Repository.Mongo.Tests.Mock
         /// The created date.
         /// </value>
         public DateTime CreatedDate { get; set; }
+
     }
 }

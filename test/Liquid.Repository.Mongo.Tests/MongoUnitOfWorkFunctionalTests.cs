@@ -1,6 +1,4 @@
-﻿using Liguid.Repository.Configuration;
-using Liquid.Core.Configuration;
-using Liquid.Core.Telemetry;
+﻿using Liquid.Core.Interfaces;
 using Liquid.Repository.Configuration;
 using Liquid.Repository.Mongo.Configuration;
 using Liquid.Repository.Mongo.Extensions;
@@ -18,8 +16,8 @@ namespace Liquid.Repository.Mongo.Tests
     class MongoUnitOfWorkFunctionalTests
     {
         private IServiceProvider _serviceProvider;
-        private ILightUnitOfWork _unitOfWork;
-        private ITestRepository _sut;
+        private ILiquidUnitOfWork _unitOfWork;
+        private ILiquidRepository<TestEntity, int> _sut;
         private MongoDbRunner _runner;
         private readonly TestEntity _entity = new TestEntity()
         {
@@ -41,30 +39,36 @@ namespace Liquid.Repository.Mongo.Tests
         {
             _runner = MongoDbRunner.Start(singleNodeReplSet: true);
 
-            var connectionSettings = new MongoSettings()
-            {
-                ConnectionString = _runner.ConnectionString,
-                DatabaseName = "functionalTest"
-            };
-            var configuration = Substitute.For<ILightDatabaseConfiguration<MongoSettings>>();
+            var settings = new List<DatabaseSettings>() {
+                new DatabaseSettings()
+                {
+                    ConnectionString = _runner.ConnectionString,
+                    DatabaseName = "functionalTest",
 
-            configuration.GetSettings(Arg.Any<string>()).Returns(connectionSettings);
+                }
+            };
+
+            var mongoSettings = Substitute.For<MongoSettings>();
+
+            mongoSettings.DbSettings = settings;
+
+            var configuration = Substitute.For<ILiquidConfiguration<MongoSettings>>();
+
+            configuration.Settings.Returns(mongoSettings);
 
             var services = new ServiceCollection();
 
             services.AddSingleton(configuration);
 
-            services.AddTransient((s) => Substitute.For<ILightTelemetryFactory>());
+            services.AddLiquidMongoRepository<TestEntity, int>("functionalTest");
 
-            services.AddMongo("test", GetType().Assembly);
-
-            services.AddTransient<ILightUnitOfWork, LightUnitOfWork>();
+            services.AddTransient<ILiquidUnitOfWork, LiquidUnitOfWork>();
 
             _serviceProvider = services.BuildServiceProvider();
 
-            _unitOfWork = _serviceProvider.GetService<ILightUnitOfWork>();
+            _unitOfWork = _serviceProvider.GetService<ILiquidUnitOfWork>();
 
-            _sut = _unitOfWork.GetRepository<ITestRepository, TestEntity, int>();
+            _sut = _unitOfWork.GetRepository<MongoRepository<TestEntity, int>, TestEntity, int>();
         }
 
         [Test]

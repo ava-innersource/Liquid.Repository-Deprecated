@@ -1,6 +1,4 @@
-﻿using Liquid.Core.Telemetry;
-using Liquid.Repository.Exceptions;
-using Liquid.Repository.Mongo.Tests.Mock;
+﻿using Liquid.Repository.Mongo.Tests.Mock;
 using MongoDB.Driver;
 using NSubstitute;
 using NUnit.Framework;
@@ -15,10 +13,8 @@ namespace Liquid.Repository.Mongo.Tests
     [ExcludeFromCodeCoverage]
     class MongoRepositoryTests
     {
-        private ILightTelemetryFactory _telemetryFactory;
-        private ILightTelemetry _lightTelemetry;
         private IMongoDataContext _dbDataContext;
-        private ILightRepository<TestEntity, int> _sut;
+        private ILiquidRepository<TestEntity, int> _sut;
         private TestEntity _entity;
         internal static string _databaseName = "IntegrationTest";
         private IMongoCollection<TestEntity> _collection;
@@ -26,9 +22,6 @@ namespace Liquid.Repository.Mongo.Tests
         [SetUp]
         protected void SetContext()
         {
-            _telemetryFactory = Substitute.For<ILightTelemetryFactory>();
-            _lightTelemetry = Substitute.For<ILightTelemetry>();
-            _telemetryFactory.GetTelemetry().Returns(_lightTelemetry);
 
             _entity = new TestEntity()
             {
@@ -50,7 +43,7 @@ namespace Liquid.Repository.Mongo.Tests
             _dbDataContext.Database.GetCollection<TestEntity>("TestEntities")
                 .Returns(_collection);
 
-            _sut = new TestRepository(_telemetryFactory, _dbDataContext);
+            _sut = new MongoRepository<TestEntity, int>(_dbDataContext);
         }
 
         private IMongoCollection<TestEntity> GetCollection()
@@ -84,9 +77,6 @@ namespace Liquid.Repository.Mongo.Tests
             _dbDataContext.Database.Received(2).GetCollection<TestEntity>("TestEntities");
 
             await _collection.Received(1).InsertOneAsync(_entity);
-
-            _lightTelemetry.Received().AddContext(Arg.Any<string>());
-            _lightTelemetry.Received().RemoveContext(Arg.Any<string>());
         }
         [Test]
         public void AddAsync_WhenClientThrowsError_ThrowException()
@@ -95,7 +85,7 @@ namespace Liquid.Repository.Mongo.Tests
 
             var test = _sut.AddAsync(_entity);
 
-            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+            Assert.ThrowsAsync<Exception>(() => test);
         }
 
         [Test]
@@ -104,9 +94,6 @@ namespace Liquid.Repository.Mongo.Tests
             var result = await _sut.GetAllAsync();
 
             _dbDataContext.Database.Received(2).GetCollection<TestEntity>("TestEntities");
-
-            _lightTelemetry.Received().AddContext(Arg.Any<string>());
-            _lightTelemetry.Received().RemoveContext(Arg.Any<string>());
 
             Assert.IsTrue(result.Count() > 0);
             Assert.AreEqual(result.FirstOrDefault(), _entity);
@@ -120,7 +107,7 @@ namespace Liquid.Repository.Mongo.Tests
 
             var test = _sut.GetAllAsync();
 
-            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+            Assert.ThrowsAsync<Exception>(() => test);
         }
 
         [Test]
@@ -130,9 +117,6 @@ namespace Liquid.Repository.Mongo.Tests
             var result = await _sut.FindByIdAsync(1234);
 
             _dbDataContext.Database.Received(2).GetCollection<TestEntity>("TestEntities");
-
-            _lightTelemetry.Received().AddContext(Arg.Any<string>());
-            _lightTelemetry.Received().RemoveContext(Arg.Any<string>());
 
             Assert.IsTrue(result == _entity);
 
@@ -145,7 +129,7 @@ namespace Liquid.Repository.Mongo.Tests
 
             var test = _sut.FindByIdAsync(1234);
 
-            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+            Assert.ThrowsAsync<Exception>(() => test);
 
         }
 
@@ -155,9 +139,6 @@ namespace Liquid.Repository.Mongo.Tests
             await _sut.RemoveAsync(_entity);
 
             _dbDataContext.Database.Received(2).GetCollection<TestEntity>("TestEntities");
-
-            _lightTelemetry.Received().AddContext(Arg.Any<string>());
-            _lightTelemetry.Received().RemoveContext(Arg.Any<string>());
 
             await _collection.Received().DeleteOneAsync(Arg.Any<FilterDefinition<TestEntity>>());
 
@@ -170,7 +151,7 @@ namespace Liquid.Repository.Mongo.Tests
 
             var test = _sut.RemoveAsync(_entity);
 
-            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+            Assert.ThrowsAsync<Exception>(() => test);
         }
 
         [Test]
@@ -180,9 +161,6 @@ namespace Liquid.Repository.Mongo.Tests
             await _sut.UpdateAsync(_entity);
 
             _dbDataContext.Database.Received().GetCollection<TestEntity>("TestEntities");
-
-            _lightTelemetry.Received().AddContext(Arg.Any<string>());
-            _lightTelemetry.Received().RemoveContext(Arg.Any<string>());
 
             await _collection.Received().ReplaceOneAsync(Arg.Any<FilterDefinition<TestEntity>>(), _entity, Arg.Any<ReplaceOptions>());
 
@@ -195,7 +173,7 @@ namespace Liquid.Repository.Mongo.Tests
 
             var test = _sut.UpdateAsync(_entity);
 
-            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+            Assert.ThrowsAsync<Exception>(() => test);
         }
 
         [Test]
@@ -204,9 +182,6 @@ namespace Liquid.Repository.Mongo.Tests
             var result = await _sut.WhereAsync(e => e.Id.Equals(_entity.Id));
 
             _dbDataContext.Database.Received().GetCollection<TestEntity>("TestEntities");
-
-            _lightTelemetry.Received().AddContext(Arg.Any<string>());
-            _lightTelemetry.Received().RemoveContext(Arg.Any<string>());
 
             Assert.IsTrue(result.Count() > 0);
             Assert.AreEqual(result.FirstOrDefault(), _entity);
@@ -219,7 +194,7 @@ namespace Liquid.Repository.Mongo.Tests
 
             var test = _sut.WhereAsync(e => e.Id.Equals(_entity.Id));
 
-            Assert.ThrowsAsync<DatabaseContextException>(() => test);
+            Assert.ThrowsAsync<Exception>(() => test);
         }
     }
 }

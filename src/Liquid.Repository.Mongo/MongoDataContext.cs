@@ -1,6 +1,4 @@
-﻿using Liquid.Core.Telemetry;
-using Liquid.Repository.Extensions;
-using MongoDB.Driver;
+﻿using MongoDB.Driver;
 using System;
 using System.Threading.Tasks;
 
@@ -10,10 +8,10 @@ namespace Liquid.Repository.Mongo
     /// Implements the Mongo data context for repositories.
     /// </summary>
     /// <seealso cref="Liquid.Repository.Mongo.IMongoDataContext" />
-    public class MongoDataContext : IMongoDataContext, IDisposable
+    public class MongoDataContext : IMongoDataContext
     {
-        private readonly ILightTelemetryFactory _telemetryFactory;
-        private IMongoClient _mongoClient;
+        private bool _disposed = false;
+        private readonly IMongoClient _mongoClient;
         private IMongoDatabase _database;
         private IClientSessionHandle _clientSessionHandle;
 
@@ -49,8 +47,7 @@ namespace Liquid.Repository.Mongo
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDataContext" /> class.
         /// </summary>
-        /// <param name="telemetryFactory">The telemetry factory.</param>
-        /// <param name="connectionId">Database connection configuration Id.</param>
+        /// <param name="databaseName">Database connection name.</param>
         /// <param name="clientProvider">Mongo client generator.</param>
         /// <exception cref="ArgumentNullException">
         /// telemetryFactory
@@ -62,13 +59,12 @@ namespace Liquid.Repository.Mongo
         /// <exception cref="System.ArgumentNullException">connectionString
         /// or
         /// databaseName</exception>
-        public MongoDataContext(ILightTelemetryFactory telemetryFactory, string connectionId, IMongoClientFactory clientProvider)
+        public MongoDataContext(string databaseName, IMongoClientFactory clientProvider)
         {
-            _telemetryFactory = telemetryFactory ?? throw new ArgumentNullException(nameof(telemetryFactory));
-            if (connectionId is null) throw new ArgumentNullException(nameof(connectionId));
+            if (databaseName is null) throw new ArgumentNullException(nameof(databaseName));
             if (clientProvider is null) throw new ArgumentNullException(nameof(clientProvider));
 
-            _mongoClient = clientProvider.GetClient(connectionId);
+            _mongoClient = clientProvider.GetClient(databaseName);
         }
 
         /// <summary>
@@ -76,11 +72,8 @@ namespace Liquid.Repository.Mongo
         /// </summary>
         public async Task StartTransactionAsync()
         {
-            await _telemetryFactory.ExecuteActionAsync("MongoRepository_StartTransactionAsync", async () =>
-            {
-                _clientSessionHandle = await _mongoClient.StartSessionAsync();
-                _clientSessionHandle.StartTransaction();
-            });
+            _clientSessionHandle = await _mongoClient.StartSessionAsync();
+            _clientSessionHandle.StartTransaction();
         }
 
         /// <summary>
@@ -88,10 +81,7 @@ namespace Liquid.Repository.Mongo
         /// </summary>
         public async Task CommitAsync()
         {
-            await _telemetryFactory.ExecuteActionAsync("MongoRepository_CommitAsync", async () =>
-            {
-                await _clientSessionHandle.CommitTransactionAsync();
-            });
+            await _clientSessionHandle.CommitTransactionAsync();
         }
 
         /// <summary>
@@ -99,21 +89,35 @@ namespace Liquid.Repository.Mongo
         /// </summary>
         public async Task RollbackTransactionAsync()
         {
-            await _telemetryFactory.ExecuteActionAsync("MongoRepository_RollbackTransactionAsync", async () =>
-            {
-                await _clientSessionHandle.AbortTransactionAsync();
-            });
+            await _clientSessionHandle.AbortTransactionAsync();
+        }
+
+        ///<inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// Releases the allocated resources <see cref="IClientSessionHandle"/> for this context.
         /// </summary>
-        public void Dispose()
+        /// <param name="disposing">Indicates if method should perform dispose.</param>
+        protected virtual void Dispose(bool disposing)
         {
-            if (_clientSessionHandle?.IsInTransaction == true) _clientSessionHandle.AbortTransaction();
-            _clientSessionHandle?.Dispose();
-        }
+            if (_disposed)
+            {
+                return;
+            }
 
+            if (disposing)
+            {
+                if (_clientSessionHandle?.IsInTransaction == true) _clientSessionHandle.AbortTransaction();
+                _clientSessionHandle?.Dispose();
+            }
+
+            _disposed = true;
+        }
         ///<inheritdoc/>
         public void SetDatabase(string databaseName)
         {

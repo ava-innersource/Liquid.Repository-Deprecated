@@ -1,6 +1,4 @@
-﻿using Liquid.Core.Telemetry;
-using Liquid.Repository.Extensions;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading.Tasks;
 
@@ -11,10 +9,10 @@ namespace Liquid.Repository.EntityFramework
     /// </summary>
     /// <seealso cref="Liquid.Repository.EntityFramework.EntityFrameworkDataContext{TContext}" />
     /// <typeparam name="TContext">The type of the <see cref="DbContext"/>.</typeparam>
-    public class EntityFrameworkDataContext<TContext> : IEntityFrameworkDataContext<TContext>, IDisposable where TContext : DbContext
+    public class EntityFrameworkDataContext<TContext> : IEntityFrameworkDataContext<TContext> where TContext : DbContext
     {
+        private bool _disposed = false;
         private readonly TContext _databaseContext;
-        private readonly ILightTelemetryFactory _telemetryFactory;
 
         /// <summary>
         /// Gets the identifier of data context.
@@ -30,46 +28,55 @@ namespace Liquid.Repository.EntityFramework
         /// <summary>
         /// Initializes a new instance of the <see cref="EntityFrameworkDataContext{TContext}" /> class.
         /// </summary>
-        /// <param name="telemetryFactory">The telemetry factory.</param>
         /// <param name="dbContext">Data base context object <see cref="DbContext"/>.</param>
-        public EntityFrameworkDataContext(ILightTelemetryFactory telemetryFactory
-            , TContext dbContext)
+        public EntityFrameworkDataContext(TContext dbContext)
         {
-            _telemetryFactory = telemetryFactory ?? throw new ArgumentNullException(nameof(telemetryFactory));
             _databaseContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
 
         ///<inheritdoc/>
         public async Task StartTransactionAsync()
         {
-            await _telemetryFactory.ExecuteActionAsync("EntityFrameworkRepository_StartTransctionAsync", async () =>
-            {
-                await _databaseContext.Database.BeginTransactionAsync();
-            });
+
+            await _databaseContext.Database.BeginTransactionAsync();
         }
 
         ///<inheritdoc/>
         public async Task CommitAsync()
         {
-            await _telemetryFactory.ExecuteActionAsync("EntityFrameworkRepository_CommitAsync", async () =>
-            {
-                await _databaseContext.Database.CommitTransactionAsync();
-            });
+            await _databaseContext.Database.CommitTransactionAsync();
         }
 
         ///<inheritdoc/>
         public async Task RollbackTransactionAsync()
         {
-            await _telemetryFactory.ExecuteActionAsync("EntityFrameworkRepository_RollbackTransactionAsync", async () =>
-            {
-                await _databaseContext.Database.RollbackTransactionAsync();
-            });
+            await _databaseContext.Database.RollbackTransactionAsync();
         }
 
         ///<inheritdoc/>
         public void Dispose()
         {
-            _databaseContext.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Releases the allocated resources <see cref="DbContext"/> for this context.
+        /// </summary>
+        /// <param name="disposing">Indicates if method should perform dispose.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                _databaseContext.Dispose();
+            }
+
+            _disposed = true;
         }
 
     }
