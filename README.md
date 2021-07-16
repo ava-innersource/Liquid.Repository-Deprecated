@@ -7,7 +7,7 @@ The main repository contains the examples and documentation on how to use Liquid
 
 Liquid.Repository
 -----------------
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Avanade_Liquid.Repository&metric=alert_status)](https://sonarcloud.io/dashboard?id=Avanade_Liquid.Repositoty) 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Avanade_Liquid.Repository&metric=alert_status)](https://sonarcloud.io/dashboard?id=Avanade_Liquid.Repository) 
 
 This package contains the repository subsystem of Liquid, along with several databases implementation. In order to use it, add the database package (Liquid.Repository.Mongo for example) you need to your project, along with the specific implementation that you will need.
 
