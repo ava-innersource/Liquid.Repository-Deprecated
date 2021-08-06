@@ -28,7 +28,7 @@ using Liquid.Repository.Mongo.Attributes;
 ```C#
 //this annotation is required by mongo cartridge only
 [Mongo("SampleCollection", "id", "MySampleDb")]
-public class MySampleModel : RepositoryEntity<int>
+public class MySampleModel : LiquidEntity<int>
 {
     public override int Id { get => base.Id; set => base.Id = value; }
     public string MyProperty { get; set; }
