@@ -72,7 +72,7 @@ Once the startup and builder is configured using the extension methods as above,
     "mongo": {
       "DbSettings": [
         {
-          "connectionString": "mongodb://liquidsample:bg3EfACCNPobPRSJDZUj3YwnElmr002yH7tmyoCtnxVgvc2hAmO08qTRTQXtgT4llDKKMR7nkTe1OGQm4GEh5A==@liquidsample.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@liquidsample@",
+          "connectionString": "",
           "databaseName": "MySampleDb"
         }
       ]
