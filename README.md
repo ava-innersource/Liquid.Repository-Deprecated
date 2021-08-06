@@ -64,7 +64,7 @@ services.AddLiquidConfiguration();
 //this method also register Liquid.Core.TelemetryInterceptor
 services.AddLiquidMongoWithTelemetry<SampleEntity, int>();
 ```
-Once the startup and builder is configured using the extension methods as above, it will be necessary to set Liquid Configuration. 
+Once the startup or builder is configured using the extension methods as above, it will be necessary to set Liquid Configuration. 
 > sample using file provider
 ```Json
 "liquid":{
