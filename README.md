@@ -16,14 +16,18 @@ This package contains the repository subsystem of Liquid, along with several dat
 |[Liquid.Repository.Mongo](https://github.com/Avanade/Liquid.Repository/tree/main/src/Liquid.Repository.Mongo)|[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Avanade_Liquid.Repository.Mongo&metric=alert_status)](https://sonarcloud.io/dashboard?id=Avanade_Liquid.Repository.Mongo)|
 |[Liquid.Repository.EntityFramework](https://github.com/Avanade/Liquid.Repository/tree/main/src/Liquid.Repository.EntityFramework)|[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Avanade_Liquid.Repository.EntityFramework&metric=alert_status)](https://sonarcloud.io/dashboard?id=Avanade_Liquid.Repository.EntityFramework)|
 
-# Getting Started
-### This is a sample usage with MongoDb cartridge
+ Getting Started
+ ==
+>This is a sample usage with MongoDb cartridge
 
-### Implement your entity and repository using Liquid inheritance
+To use Liquid.Repository in your solution, you just need to implement LiquidEntity inheritance, and inject ILiquid.Repository interface, as above
 ```C#
 using Liquid.Repository;
+using Liquid.Repository.Mongo.Attributes;
 ```
 ```C#
+//this annotation is required by mongo cartridge only
+[Mongo("SampleCollection", "id", "MySampleDb")]
 public class MySampleModel : RepositoryEntity<int>
 {
     public override int Id { get => base.Id; set => base.Id = value; }
@@ -32,64 +36,50 @@ public class MySampleModel : RepositoryEntity<int>
     public DateTime MyProperty3 { get; set; }        
 }
 ```
-```C#
-using Liquid.Repository.Mongo;
-```
-```C#
-//the type of your repository must be the entity related to it.
- interface IMySampleRepository : ILightRepository<MySampleModel, int>
- {
-     //Liquid inheritance provides the basic CRUD operations, but you can implement other methods specifically for your application's needs.
- }
-```
-```C#
-//the type of your repository must be the entity related to it.
-public class MySampleRepository : MongoRepository<MySampleModel, int>, IMySampleRepository
-    {
-        public MySampleRepository(ILightTelemetryFactory telemetryFactory, IMongoDataContext dataContext) 
-            : base(telemetryFactory, dataContext)
-        {
-        }
-        //Liquid inheritance provides the basic CRUD operations, but you can implement other methods specifically for your application's needs.
-    }
-```
-### Include dependency in domain class constructor, and invoke methods
+
+Include dependency in domain class constructor, and invoke methods
 
 ```C#
-public class MySampleDomainClass 
+public class SampleDomainClass 
 {
-    private private IMySampleRepository _repository;
+    private ILiquidRepository<SampleEntity, int> _repository;
 
-    public MySampleDomainClass(IMySampleRepository repository)
+    public SampleDomainClass((ILiquidRepository<SampleEntity, int> repository)
     {
          _repository = repository;
     }
     public async Task Handle()
-    {
-        //just invoke repository methods
+    {        
         var entity = await _repository.FindByIdAsync(123);
 
         await _repository.UpdateAsync(entity);
     }
 }
 ```
-Dependency Injection
+Cartridge packages also provides registration methods for your repositories and configurations
 ```C#
-services.AddDefaultTelemetry();
-services.AddDefaultContext();
-services.AddConfigurations(GetType().Assembly);
-//the first parameter value must be de configuration section name where connection string is declared.
-services.AddMongo("sample", GetType().Assembly);
+//if you use port packages (Messagin/WebApi) registration methods this first line is unecessary
+services.AddLiquidConfiguration();
+
+//this method also register Liquid.Core.TelemetryInterceptor
+services.AddLiquidMongoWithTelemetry<SampleEntity, int>();
 ```
-appsettings.json
+Once the startup and builder is configured using the extension methods as above, it will be necessary to set Liquid Configuration. 
+> sample using file provider
 ```Json
-"databases": {
-      "mongo" : {
-        "sample": {
-          "connectionString": "",
+"liquid":{
+  "databases": {
+    "mongo": {
+      "DbSettings": [
+        {
+          "connectionString": "mongodb://liquidsample:bg3EfACCNPobPRSJDZUj3YwnElmr002yH7tmyoCtnxVgvc2hAmO08qTRTQXtgT4llDKKMR7nkTe1OGQm4GEh5A==@liquidsample.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@liquidsample@",
           "databaseName": "MySampleDb"
         }
-      }
+      ]
     }
   }
+}
 ```
+>To get more information of Liquid core features as Configuration and Telemetry see [Liquid.Core Documentation](https://github.com/Avanade/Liquid.Core#readme)
+
+>To get a guide of Web Api implementation using Liquid Application Framework see [Liquid.WebApi Documentation](https://github.com/Avanade/Liquid.WebApi#readme)
