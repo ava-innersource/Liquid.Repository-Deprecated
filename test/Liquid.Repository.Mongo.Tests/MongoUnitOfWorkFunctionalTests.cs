@@ -11,11 +11,13 @@ using NSubstitute;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Liquid.Repository.Mongo.Tests
 {
+    [ExcludeFromCodeCoverage]
     class MongoUnitOfWorkFunctionalTests
     {
         private IServiceProvider _serviceProvider;
@@ -67,7 +69,7 @@ namespace Liquid.Repository.Mongo.Tests
 
             services.AddSingleton(configuration);
 
-            services.AddLiquidMongoWithTelemetry<TestEntity, int>();
+            services.AddLiquidMongoWithTelemetry<TestEntity, int>(options => { options.DatabaseName = "TestDatabase"; options.CollectionName = "TestEntities"; options.ShardKey = "id"; });
 
             services.AddTransient<ILiquidUnitOfWork, LiquidUnitOfWork>();
 
@@ -127,7 +129,7 @@ namespace Liquid.Repository.Mongo.Tests
 
             _runner.Dispose();
 
-            Assert.AreEqual(result.ToList().Count, 0);
+            Assert.IsFalse(result.Any());
         }
 
         [Test]

@@ -20,15 +20,12 @@ This package contains the repository subsystem of Liquid, along with several dat
  ==
 >This is a sample usage with MongoDb cartridge
 
-To use Liquid.Repository in your solution, you just need to implement LiquidEntity inheritance, and inject ILiquid.Repository interface, as above
+To use Liquid.Repository in your solution, you just need to implement LiquidEntity inheritance, and inject ILiquid.Repository interface, as following
 ```C#
 using Liquid.Repository;
-using Liquid.Repository.Mongo.Attributes;
 ```
 ```C#
-//this annotation is required by mongo cartridge only
-[Mongo("SampleCollection", "id", "MySampleDb")]
-public class MySampleModel : LiquidEntity<int>
+public class MySampleEntity : LiquidEntity<int>
 {
     public override int Id { get => base.Id; set => base.Id = value; }
     public string MyProperty { get; set; }
@@ -62,7 +59,8 @@ Cartridge packages also provides registration methods for your repositories and 
 services.AddLiquidConfiguration();
 
 //this method also register Liquid.Core.TelemetryInterceptor
-services.AddLiquidMongoWithTelemetry<SampleEntity, int>();
+//Mongo cartridge requires some options to configure the persistence
+services.AddLiquidMongoWithTelemetry<MySampleEntity, int>(options => { options.DatabaseName = "MySampleDatabase"; options.CollectionName = "MySampleCollection"; options.ShardKey = "id"; });
 ```
 Once the startup or builder is configured using the extension methods as above, it will be necessary to set Liquid Configuration. 
 > sample using file provider

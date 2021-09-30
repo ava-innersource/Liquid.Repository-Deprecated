@@ -11,7 +11,7 @@ namespace Liquid.Repository.Mongo.Tests.Mock
     ///     <cref>Liquid.Data.Entities.DataMappingBase{System.Int32}</cref>
     /// </seealso>
     [ExcludeFromCodeCoverage]
-    public class TestEntity : LiquidEntity<int>
+    public class AnotherTestEntity : LiquidEntity<int>
     {
         /// <summary>
         /// Gets or sets the mock title.
