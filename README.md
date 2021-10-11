@@ -69,17 +69,17 @@ services.AddLiquidMongoRepository<MySampleEntity, int>(databaseSettingsConfigura
 Once the startup or builder is configured using the extension methods as above, it will be necessary to set the Configuration. 
 > sample using the appsettings file
 ```Json
-"MyMongoDbSettings":{
-    "MySampleDatabase": {
-          "ConnectionString": "mongodb://mongodb0.example.com:27017",
-          "DatabaseName": "MySampleDatabase"
+{
+    "MyMongoDbSettings": {
+        "MySampleDatabase": {
+            "ConnectionString": "mongodb://mongodb0.example.com:27017",
+            "DatabaseName": "MySampleDatabase"
         },
-    "OtherMongoDatabase": {
-          "ConnectionString": "mongodb://mongodb1.example.com:27017",
-          "DatabaseName": "OtherMongoDatabase"
+        "OtherMongoDatabase": {
+            "ConnectionString": "mongodb://mongodb1.example.com:27017",
+            "DatabaseName": "OtherMongoDatabase"
         }
     }
-  }
 }
 ```
 >To get more information of Liquid core features as Configuration and Telemetry see [Liquid.Core Documentation](https://github.com/Avanade/Liquid.Core#readme)
