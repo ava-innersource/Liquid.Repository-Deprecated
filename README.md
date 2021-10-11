@@ -55,25 +55,29 @@ public class SampleDomainClass
 ```
 Cartridge packages also provides registration methods for your repositories and configurations
 ```C#
-//if you use port packages (Messagin/WebApi) registration methods this first line is unecessary
-services.AddLiquidConfiguration();
+
+//get the Mongo databases configuration section
+var databaseSettingsConfigurationSection = configuration.GetSection("MyMongoDbSettings");
 
 //this method also register Liquid.Core.TelemetryInterceptor
-//Mongo cartridge requires some options to configure the persistence
-services.AddLiquidMongoWithTelemetry<MySampleEntity, int>(options => { options.DatabaseName = "MySampleDatabase"; options.CollectionName = "MySampleCollection"; options.ShardKey = "id"; });
+//Mongo cartridge requires some options to configure the persistence of this Entity
+services.AddLiquidMongoRepository<MySampleEntity, int>(databaseSettingsConfigurationSection, 
+                                                       options => { options.DatabaseName = "MySampleDatabase"; 
+                                                                    options.CollectionName = "MySampleCollection"; 
+                                                                    options.ShardKey = "id"; });
 ```
-Once the startup or builder is configured using the extension methods as above, it will be necessary to set Liquid Configuration. 
-> sample using file provider
+Once the startup or builder is configured using the extension methods as above, it will be necessary to set the Configuration. 
+> sample using the appsettings file
 ```Json
-"liquid":{
-  "databases": {
-    "mongo": {
-      "DbSettings": [
-        {
-          "connectionString": "",
-          "databaseName": "MySampleDb"
+"MyMongoDbSettings":{
+    "MySampleDatabase": {
+          "ConnectionString": "mongodb://mongodb0.example.com:27017",
+          "DatabaseName": "MySampleDatabase"
+        },
+    "OtherMongoDatabase": {
+          "ConnectionString": "mongodb://mongodb1.example.com:27017",
+          "DatabaseName": "OtherMongoDatabase"
         }
-      ]
     }
   }
 }
