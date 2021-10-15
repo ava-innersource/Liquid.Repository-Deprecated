@@ -11,7 +11,6 @@ namespace Liquid.Repository.EntityFramework.Extensions
     /// <summary>
     /// Entity Framework Service Collection Extensions Class.
     /// </summary>
-    [ExcludeFromCodeCoverage]
     public static class IServiceCollectionExtensions
     {
         /// <summary>
@@ -32,7 +31,7 @@ namespace Liquid.Repository.EntityFramework.Extensions
 
             services.AddScoped<EntityFrameworkRepository<TEntity, TIdentifier, TContext>>();
 
-            services.AddLiquidTelemetryInterceptor<ILiquidRepository<TEntity, TIdentifier>, EntityFrameworkRepository<TEntity, TIdentifier, TContext>>();
+            services.AddScopedLiquidTelemetry<ILiquidRepository<TEntity, TIdentifier>, EntityFrameworkRepository<TEntity, TIdentifier, TContext>>();
 
             return services;
         }

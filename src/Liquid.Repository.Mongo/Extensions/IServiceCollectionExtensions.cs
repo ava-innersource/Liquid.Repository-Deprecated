@@ -1,12 +1,10 @@
 ﻿using Liquid.Core.Extensions.DependencyInjection;
 using Liquid.Core.Implementations;
 using Liquid.Repository.Mongo.Configuration;
-using Liquid.Repository.Mongo.Exceptions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Liquid.Repository.Mongo.Extensions
 {
@@ -18,27 +16,25 @@ namespace Liquid.Repository.Mongo.Extensions
         /// <summary>
         /// Registers a <see cref="MongoRepository{TEntity, TIdentifier}"/> for the entity <typeparamref name="TEntity"/>,
         /// and a <see cref="MongoClientFactory"/>  if not previously registered.
-        /// This method also registers <see cref="LiquidTelemetryInterceptor"/> for MongoRepository instance.
+        /// This method may also registers <see cref="LiquidTelemetryInterceptor"/> for MongoRepository instance.
         /// </summary>
         /// <typeparam name="TEntity">Type of entity that the repository should correspond to</typeparam>
         /// <typeparam name="TIdentifier">Entity identifier type.</typeparam>
         /// <param name="services">Extended ServiceCollection object.</param>
-        /// <param name="entityOptions">MongoEntityOptions to configure how the entity will be persisted on Mongo.</param>
-        public static IServiceCollection AddLiquidMongoWithTelemetry<TEntity, TIdentifier>(this IServiceCollection services, Action<MongoEntityOptions> entityOptions)
+        /// <param name="entitiesConfigurationRootSectionName">Name of the configuration section where all entities have their repository settings configured. Default: "Liquid:RepositorySettings:Entities".</param>
+        /// <param name="activateTelemetry">Specifies whether the telemetry should be activated or not for this repository. Default: True.</param>
+        public static IServiceCollection AddLiquidMongoRepository<TEntity, TIdentifier>(this IServiceCollection services, string entitiesConfigurationRootSectionName = "Liquid:RepositorySettings:Entities", bool activateTelemetry = true)
             where TEntity : LiquidEntity<TIdentifier>, new()
         {
-            if (services.FirstOrDefault(x => x.ServiceType == typeof(IMongoClientFactory)) is null)
-                services.AddSingleton<IMongoClientFactory, MongoClientFactory>();
-
-            services.AddOptions();
-
-            services.Configure<MongoEntityOptions>(typeof(TEntity).Name, entityOptions);
+            services.TryAddSingleton<IMongoClientFactory, MongoClientFactory>();
+            services.TryAddSingleton<IMongoEntitySettingsFactory>(provider => { return ActivatorUtilities.CreateInstance<MongoEntitySettingsFactory>(provider, entitiesConfigurationRootSectionName); });
 
             services.AddScoped<IMongoDataContext<TEntity>, MongoDataContext<TEntity>>();
 
             services.AddScoped<MongoRepository<TEntity, TIdentifier>>();
 
-            services.AddLiquidTelemetryInterceptor<ILiquidRepository<TEntity, TIdentifier>, MongoRepository<TEntity, TIdentifier>>();
+            if (activateTelemetry)
+                services.AddScopedLiquidTelemetry<ILiquidRepository<TEntity, TIdentifier>, MongoRepository<TEntity, TIdentifier>>();
 
             return services;
         }
@@ -46,29 +42,47 @@ namespace Liquid.Repository.Mongo.Extensions
         /// <summary>
         /// Registers a scoped <see cref="MongoRepository{TEntity, TIdentifier}"/> for any entity 
         /// that exists in project and a <see cref="MongoClientFactory"/>  if not previously registered.
+        /// This method may also registers <see cref="LiquidTelemetryInterceptor"/> for MongoRepository instances.
         /// </summary>
         /// <param name="services">Extended ServiceCollection object.</param>
-        /// <param name="mongoEntityConfigurationSection">Configuration section where entities have their options configured.</param>
-        public static IServiceCollection AddLiquidMongoRepositories(this IServiceCollection services, IConfiguration mongoEntityConfigurationSection)
+        /// <param name="entitiesConfigurationRootSectionName">Name of the configuration section where all entities have their repository settings configured. Default: "Liquid:RepositorySettings:Entities".</param>
+        /// <param name="activateTelemetry">Specifies whether the telemetry should be activated or not for this repository. Default: True.</param>
+        public static IServiceCollection AddLiquidMongoRepositories(this IServiceCollection services, string entitiesConfigurationRootSectionName = "Liquid:RepositorySettings:Entities", bool activateTelemetry = true)
         {
-            if (mongoEntityConfigurationSection is null || 
-                !mongoEntityConfigurationSection.GetChildren().Any()) throw new MongoEntityOptionsSettingsDoesNotExistException(nameof(mongoEntityConfigurationSection));
-
-            if (services.FirstOrDefault(x => x.ServiceType == typeof(IMongoClientFactory)) is null)
-                services.AddSingleton<IMongoClientFactory, MongoClientFactory>();
-
-            services.AddOptions();
-
-            foreach (var entityOptions in mongoEntityConfigurationSection.GetChildren())
-            {
-                services.Configure<MongoEntityOptions>(entityOptions.Key, entityOptions);
-            }
+            services.TryAddSingleton<IMongoClientFactory, MongoClientFactory>();
+            services.TryAddSingleton<IMongoEntitySettingsFactory>(provider => { return ActivatorUtilities.CreateInstance<MongoEntitySettingsFactory>(provider, entitiesConfigurationRootSectionName); });
 
             services.AddScoped(typeof(IMongoDataContext<>), typeof(MongoDataContext<>));
 
             services.AddScoped(typeof(ILiquidRepository<,>), typeof(MongoRepository<,>));
 
+            if (activateTelemetry) 
+            {
+                // TODO: add services.AddScopedLiquidTelemetry for all Repositories
+                //       It will be something like: "services.AddScopedLiquidTelemetry(typeof(<ILiquidRepository<,>, typeof(MongoRepository<,,>>));"
+                //       For now, the extension method for LiquidTelemetry doesn't support Open Generics
+                //       We are investigating the solution alternatives
+                //       Right now, if you use this extension method, the Telemetry will not be captured
+            }
+
             return services;
+        }
+
+
+        /// <summary>
+        /// Registers a <see cref="MongoRepository{TEntity, TIdentifier}"/> for the entity <typeparamref name="TEntity"/>,
+        /// and a <see cref="MongoClientFactory"/>  if not previously registered.
+        /// This method also registers <see cref="LiquidTelemetryInterceptor"/> for MongoRepository instance.
+        /// </summary>
+        /// <typeparam name="TEntity">Type of entity that the repository should correspond to</typeparam>
+        /// <typeparam name="TIdentifier">Entity identifier type.</typeparam>
+        /// <param name="services">Extended ServiceCollection object.</param>
+        [ExcludeFromCodeCoverage]
+        [Obsolete("This is method is deprecated. Use AddLiquidMongoRepository<T, T>(activateTelemetry: true) instead.")]
+        public static IServiceCollection AddLiquidMongoWithTelemetry<TEntity, TIdentifier>(this IServiceCollection services)
+            where TEntity : LiquidEntity<TIdentifier>, new()
+        {
+            return AddLiquidMongoRepository<TEntity, TIdentifier>(services, activateTelemetry: true);
         }
     }
 }

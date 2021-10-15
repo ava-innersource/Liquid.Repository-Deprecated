@@ -19,7 +19,8 @@ namespace Liquid.Repository.Mongo
         private readonly IMongoClient _mongoClient;
         private IMongoDatabase _database;
         private IClientSessionHandle _clientSessionHandle;
-        private readonly MongoEntityOptions _settings;
+        private readonly MongoEntitySettings _settings;
+
         /// <summary>
         /// Gets the Mongo Database.
         /// </summary>
@@ -52,35 +53,30 @@ namespace Liquid.Repository.Mongo
         /// <summary>
         /// 
         /// </summary>
-        public MongoEntityOptions Settings => _settings;
+        public MongoEntitySettings Settings => _settings;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDataContext{Tentity}" /> class.
         /// </summary>
         /// <param name="clientProvider">Mongo client generator.</param>
-        /// <param name="entityOptions">MongoEntityOptions to configure how the entity will be persisted on Mongo.</param>
+        /// <param name="settingsFactory">Mongo DB settings generator.</param>
         /// <exception cref="ArgumentNullException">
-        /// telemetryFactory
+        /// clientProvider
         /// or
-        /// connectionString
-        /// or
-        /// databaseName
+        /// settingsFactory
         /// </exception>
-        /// <exception cref="System.ArgumentNullException">connectionString
-        /// or
-        /// databaseName</exception>
-        public MongoDataContext(IMongoClientFactory clientProvider, IOptionsSnapshot<MongoEntityOptions> entityOptions)
+        public MongoDataContext(IMongoClientFactory clientProvider, IMongoEntitySettingsFactory settingsFactory)
         {    
             if (clientProvider is null) throw new ArgumentNullException(nameof(clientProvider));
-            if (entityOptions is null) throw new ArgumentNullException(nameof(entityOptions));
+            if (settingsFactory is null) throw new ArgumentNullException(nameof(settingsFactory));
 
-            _settings = entityOptions.Get(typeof(TEntity).Name);
+            _settings = settingsFactory.GetSettings<TEntity>();
 
-            _mongoClient = clientProvider.GetClient(_settings.DatabaseName);
+            if (_settings is null) throw new MongoEntitySettingsDoesNotExistException(nameof(TEntity));
 
-            SetDatabase(_settings.DatabaseName);
+            _mongoClient = clientProvider.GetClient(_settings.DatabaseSettings);
 
-            ValidateCollection();
+            SetDatabase(_settings.DatabaseSettings.DatabaseName);
         }
 
         /// <summary>
@@ -134,25 +130,11 @@ namespace Liquid.Repository.Mongo
 
             _disposed = true;
         }
+
         ///<inheritdoc/>
         public void SetDatabase(string databaseName)
         {
             _database = _mongoClient.GetDatabase(databaseName);
-        }
-
-        /// <summary>
-        /// Validates if the collection exists, if not, an exception is thrown.
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="MongoCollectionDoesNotExistException">Collection, _databaseName</exception>
-        private void ValidateCollection()
-        {
-
-            var collection = Database.GetCollection<TEntity>(_settings.CollectionName);
-            if (collection is null)
-            {
-                throw new MongoCollectionDoesNotExistException(_settings.CollectionName, _settings.DatabaseName);
-            }
         }
     }
 }

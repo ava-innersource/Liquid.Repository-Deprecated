@@ -1,40 +1,39 @@
-﻿using Liguid.Repository.Configuration;
-using Liquid.Core.Interfaces;
-using Liquid.Repository.Mongo.Configuration;
-using Liquid.Repository.Mongo.Exceptions;
+﻿using Liquid.Repository.Configuration;
 using MongoDB.Driver;
 using System;
+using System.Collections.Generic;
 
 namespace Liquid.Repository.Mongo
 {
     ///<inheritdoc/>
     public class MongoClientFactory : IMongoClientFactory
     {
-        private readonly ILiquidConfiguration<MongoSettings> _configuration;
+        private readonly IDictionary<int, IMongoClient> _mongoClients;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoClientFactory" /> class.
         /// </summary>
-        /// <param name="configuration">Database configuration settings.</param>
-        public MongoClientFactory(ILiquidConfiguration<MongoSettings> configuration)
+        public MongoClientFactory()
         {
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _mongoClients = new Dictionary<int, IMongoClient>();
         }
 
         ///<inheritdoc/>
-        public IMongoClient GetClient(string databaseName)
+        public IMongoClient GetClient(DatabaseSettings databaseSettings)
         {
-            var databaseSettings = _configuration.Settings.GetDbSettings(databaseName);
-            if (databaseSettings == null) throw new LiquidDatabaseSettingsDoesNotExistException(databaseName);
+            if (databaseSettings is null) throw new ArgumentNullException(nameof(databaseSettings));
 
+            // Try to get from the created clients collection, otherwise creates a new client
+            IMongoClient mongoClient = _mongoClients.TryGetValue(databaseSettings.GetHashCode(), out mongoClient) ? mongoClient : CreateClient(databaseSettings);
+
+            return mongoClient;
+        }
+
+        private IMongoClient CreateClient(DatabaseSettings databaseSettings)
+        {
             var mongoClient = new MongoClient(databaseSettings.ConnectionString);
 
-            var database = mongoClient.GetDatabase(databaseSettings.DatabaseName);
-
-            if (database is null)
-            {
-                throw new MongoDatabaseDoesNotExistException(databaseSettings.DatabaseName);
-            }
+            _mongoClients.Add(databaseSettings.GetHashCode(), mongoClient);
 
             return mongoClient;
         }

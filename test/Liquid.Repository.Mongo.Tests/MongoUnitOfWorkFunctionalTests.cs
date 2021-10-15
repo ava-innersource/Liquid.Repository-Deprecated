@@ -1,9 +1,7 @@
 ﻿using Liquid.Core.Implementations;
-using Liquid.Core.Interfaces;
-using Liquid.Repository.Configuration;
-using Liquid.Repository.Mongo.Configuration;
 using Liquid.Repository.Mongo.Extensions;
 using Liquid.Repository.Mongo.Tests.Mock;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Mongo2Go;
@@ -24,6 +22,7 @@ namespace Liquid.Repository.Mongo.Tests
         private ILiquidUnitOfWork _unitOfWork;
         private ILiquidRepository<TestEntity, int> _sut;
         private MongoDbRunner _runner;
+
         private readonly TestEntity _entity = new TestEntity()
         {
             CreatedDate = DateTime.Now,
@@ -44,32 +43,25 @@ namespace Liquid.Repository.Mongo.Tests
         {
             _runner = MongoDbRunner.Start(singleNodeReplSet: true);
 
-            var settings = new List<DatabaseSettings>() {
-                new DatabaseSettings()
-                {
-                    ConnectionString = _runner.ConnectionString,
-                    DatabaseName = "TestDatabase",
-
-                }
+            var mongoDatabaseConfiguration = new Dictionary<string, string>
+            {
+                {"Liquid:RepositorySettings:DefaultDatabaseSettings:DatabaseName", "TestDatabase"},
+                {"Liquid:RepositorySettings:DefaultDatabaseSettings:ConnectionString", _runner.ConnectionString},
+                {"Liquid:RepositorySettings:Entities:TestEntity:CollectionName", "TestCollection"},
+                {"Liquid:RepositorySettings:Entities:TestEntity:ShardKey", "Id"}
             };
 
-            var mongoSettings = Substitute.For<MongoSettings>();
-
-            mongoSettings.DbSettings = settings;
-
-            var configuration = Substitute.For<ILiquidConfiguration<MongoSettings>>();
-
-            configuration.Settings.Returns(mongoSettings);
-
-
+            var databaseSettings = new ConfigurationBuilder()
+                                        .AddInMemoryCollection(mongoDatabaseConfiguration)
+                                        .Build();
 
             var services = new ServiceCollection();
 
+            services.AddSingleton<IConfiguration>(databaseSettings);
+
             services.AddSingleton(Substitute.For<ILogger<LiquidTelemetryInterceptor>>());
 
-            services.AddSingleton(configuration);
-
-            services.AddLiquidMongoWithTelemetry<TestEntity, int>(options => { options.DatabaseName = "TestDatabase"; options.CollectionName = "TestEntities"; options.ShardKey = "id"; });
+            services.AddLiquidMongoRepository<TestEntity, int>();
 
             services.AddTransient<ILiquidUnitOfWork, LiquidUnitOfWork>();
 
@@ -78,6 +70,17 @@ namespace Liquid.Repository.Mongo.Tests
             _unitOfWork = _serviceProvider.GetService<ILiquidUnitOfWork>();
 
             _sut = _unitOfWork.GetRepository<ILiquidRepository<TestEntity, int>, TestEntity, int>();
+        }
+
+        [TearDown]
+        public void DisposeResources()
+        {
+            _serviceProvider = null;
+            _sut = null;
+            _unitOfWork.Dispose();
+            _unitOfWork = null;
+            _runner.Dispose();
+            _runner = null;
         }
 
         [Test]
@@ -99,7 +102,6 @@ namespace Liquid.Repository.Mongo.Tests
         [Test]
         public async Task AddAsync_WhenRollbackTransaction_ItemNotInserted()
         {
-
             await _unitOfWork.StartTransactionAsync();
 
             await _sut.AddAsync(_entity);
@@ -111,7 +113,6 @@ namespace Liquid.Repository.Mongo.Tests
             _runner.Dispose();
 
             Assert.Null(result);
-
         }
         
         [Test]

@@ -1,8 +1,4 @@
-﻿using Liguid.Repository.Configuration;
-using Liquid.Core.Implementations;
-using Liquid.Core.Interfaces;
-using Liquid.Repository.Configuration;
-using Liquid.Repository.Mongo.Configuration;
+﻿using Liquid.Core.Implementations;
 using Liquid.Repository.Mongo.Tests.Mock;
 using Liquid.Repository.Mongo.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +9,6 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Liquid.Repository.Mongo.Exceptions;
 using Microsoft.Extensions.Configuration;
 
 namespace Liquid.Repository.Mongo.Tests
@@ -21,9 +16,13 @@ namespace Liquid.Repository.Mongo.Tests
     [ExcludeFromCodeCoverage]
     public class IServiceCollectionExtensionsTests
     {
+        internal const string _databaseConfigurationSectionName = "MyMongoDbSettings";
+        internal const string _entityConfigurationSectionName = "MyMongoEntityOptions:Entities";
+        internal const string _databaseName = "TestDatabase";
+
         private IServiceCollection _services;
         private IServiceProvider _serviceProvider;
-        private IConfiguration _mongoEntityOptions;
+        private IConfiguration _configuration;
         private MongoDbRunner _runner;
 
         [SetUp]
@@ -31,74 +30,58 @@ namespace Liquid.Repository.Mongo.Tests
         {
             _runner = MongoDbRunner.Start(singleNodeReplSet: true);
 
-            var settings = new List<DatabaseSettings>() {
-                new DatabaseSettings()
-                {
-                    ConnectionString = _runner.ConnectionString,
-                    DatabaseName = "TestDatabase",
-
-                }
-            };
-
-            var mongoSettings = Substitute.For<MongoSettings>();
-
-            mongoSettings.DbSettings = settings;
-
-            var configuration = Substitute.For<ILiquidConfiguration<MongoSettings>>();
-
-            configuration.Settings.Returns(mongoSettings);
-
-
-
             _services = new ServiceCollection();
 
             _services.AddSingleton(Substitute.For<ILogger<LiquidTelemetryInterceptor>>());
 
-            _services.AddSingleton(configuration);
-
-
+            var mongoDatabaseConfiguration = new Dictionary<string, string>
+            {
+                {$"{_databaseConfigurationSectionName}:{_databaseName}:DatabaseName", _databaseName},
+                {$"{_databaseConfigurationSectionName}:{_databaseName}:ConnectionString", _runner.ConnectionString},
+            };
 
             var mongoEntityConfiguration = new Dictionary<string, string>
             {
-                {"MongoEntityOptions:TestEntity:DatabaseName", "TestDatabase"},
-                {"MongoEntityOptions:TestEntity:CollectionName", "TestEntities"},
-                {"MongoEntityOptions:TestEntity:ShardKey", "id"},
-                {"MongoEntityOptions:AnotherTestEntity:DatabaseName", "TestDatabase"},
-                {"MongoEntityOptions:AnotherTestEntity:CollectionName", "AnotherTestEntities"},
-                {"MongoEntityOptions:AnotherTestEntity:ShardKey", "id"}
+                {"MyMongoEntityOptions:DefaultDatabaseSettings:DatabaseName", _databaseName},
+                {"MyMongoEntityOptions:DefaultDatabaseSettings:ConnectionString", _runner.ConnectionString},
+                {$"{_entityConfigurationSectionName}:TestEntity:CollectionName", "TestEntities"},
+                {$"{_entityConfigurationSectionName}:TestEntity:ShardKey", "id"},
+                {$"{_entityConfigurationSectionName}:AnotherTestEntity:CollectionName", "AnotherTestEntities"},
+                {$"{_entityConfigurationSectionName}:AnotherTestEntity:ShardKey", "id"},
+                {$"{_entityConfigurationSectionName}:AnotherTestEntity:DatabaseSettingsSectionName", $"{_databaseConfigurationSectionName}:{_databaseName}"}
             };
 
-            _mongoEntityOptions = new ConfigurationBuilder()
+            _configuration = new ConfigurationBuilder()
+                                        .AddInMemoryCollection(mongoDatabaseConfiguration)
                                         .AddInMemoryCollection(mongoEntityConfiguration)
-                                        .Build()
-                                        .GetSection("MongoEntityOptions");
+                                        .Build();
+
+            _services.AddSingleton<IConfiguration>(_configuration);
+        }
+
+        [TearDown]
+        public void DisposeResources()
+        {
+            _configuration = null;
+            _serviceProvider = null;
+            _services = null;
+            _runner.Dispose();
+            _runner = null;
         }
 
         [Test]
-        public void AddLiquidMongoWithTelemetry_WhenMongoEntityOptionsIsNull_ThrowsException()
+        public void AddLiquidMongoRepository_WhenAdded_ServicesIsFilledForTestEntity()
         {
-            Assert.Throws<ArgumentNullException>(() => _services.AddLiquidMongoWithTelemetry<TestEntity, int>(null));
-        }
-
-        [Test]
-        public void AddLiquidMongoWithTelemetry_WhenAdded_ServicesIsFilledForTestEntity()
-        {
-            _services.AddLiquidMongoWithTelemetry<TestEntity, int>(options => { options.DatabaseName = "TestDatabase"; options.CollectionName = "TestEntities"; options.ShardKey = "id"; });
+            _services.AddLiquidMongoRepository<TestEntity, int>(_entityConfigurationSectionName);
             _serviceProvider = _services.BuildServiceProvider();
             Assert.IsNotNull(_serviceProvider.GetService<IMongoDataContext<TestEntity>>());
             Assert.IsNotNull(_serviceProvider.GetService<ILiquidRepository<TestEntity, int>>());
         }
 
         [Test]
-        public void AddLiquidMongoRepositories_WhenMongoEntityOptionsConfigurationDoesntExist_ThrowsException()
-        {
-            Assert.Throws<MongoEntityOptionsSettingsDoesNotExistException>(() => _services.AddLiquidMongoRepositories(null));
-        }
-
-        [Test]
         public void AddLiquidMongoRepositories_WhenAdded_ServicesIsFilledForTestEntities()
         {
-            _services.AddLiquidMongoRepositories(_mongoEntityOptions);
+            _services.AddLiquidMongoRepositories(_entityConfigurationSectionName);
             _serviceProvider = _services.BuildServiceProvider();
             Assert.IsNotNull(_serviceProvider.GetService<IMongoDataContext<TestEntity>>());
             Assert.IsNotNull(_serviceProvider.GetService<ILiquidRepository<TestEntity, int>>());
