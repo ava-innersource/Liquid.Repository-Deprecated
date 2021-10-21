@@ -1,10 +1,7 @@
-﻿using Liquid.Core.Implementations;
-using Liquid.Repository.Mongo.Extensions;
-using Liquid.Repository.Mongo.Tests.Mock;
+using Liquid.Core.Implementations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Mongo2Go;
 using NSubstitute;
 using NUnit.Framework;
 using System;
@@ -12,16 +9,17 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
+using Liquid.Repository.Tests.Mock;
+using Liquid.Repository.Exceptions;
 
-namespace Liquid.Repository.Mongo.Tests
+namespace Liquid.Repository.Tests
 {
     [ExcludeFromCodeCoverage]
-    public class MongoUnitOfWorkFunctionalTests
+    public class LiquidUnitOfWorkIntegrationTests
     {
         private IServiceProvider _serviceProvider;
         private ILiquidUnitOfWork _unitOfWork;
         private ILiquidRepository<TestEntity, int> _sut;
-        private MongoDbRunner _runner;
 
         private readonly TestEntity _entity = new TestEntity()
         {
@@ -41,27 +39,11 @@ namespace Liquid.Repository.Mongo.Tests
         [SetUp]
         public void Setup()
         {
-            _runner = MongoDbRunner.Start(singleNodeReplSet: true);
-
-            var mongoDatabaseConfiguration = new Dictionary<string, string>
-            {
-                {"Liquid:RepositorySettings:DefaultDatabaseSettings:DatabaseName", "TestDatabase"},
-                {"Liquid:RepositorySettings:DefaultDatabaseSettings:ConnectionString", _runner.ConnectionString},
-                {"Liquid:RepositorySettings:Entities:TestEntity:CollectionName", "TestCollection"},
-                {"Liquid:RepositorySettings:Entities:TestEntity:ShardKey", "Id"}
-            };
-
-            var databaseSettings = new ConfigurationBuilder()
-                                        .AddInMemoryCollection(mongoDatabaseConfiguration)
-                                        .Build();
-
             var services = new ServiceCollection();
-
-            services.AddSingleton<IConfiguration>(databaseSettings);
 
             services.AddSingleton(Substitute.For<ILogger<LiquidTelemetryInterceptor>>());
 
-            services.AddLiquidMongoRepository<TestEntity, int>();
+            services.AddScoped<ILiquidRepository<TestEntity, int>, InMemoryRepository<TestEntity, int>>();
 
             services.AddTransient<ILiquidUnitOfWork, LiquidUnitOfWork>();
 
@@ -75,13 +57,37 @@ namespace Liquid.Repository.Mongo.Tests
         [TearDown]
         public void DisposeResources()
         {
-            _unitOfWork.Dispose();
-            _runner.Dispose();
-
             _serviceProvider = null;
             _sut = null;
+            _unitOfWork.Dispose();
             _unitOfWork = null;
-            _runner = null;
+        }
+
+        [Test]
+        public void LiquidUnitOfWorkConstructor_WhenServiceProviderDoesntExists_ThrowException()
+        {
+            Assert.Throws<ArgumentNullException>(() => new LiquidUnitOfWork(null));
+        }
+
+        [Test]
+        public void GetRepository_WhenRepositoryDoesntExists_ThrowException()
+        {
+            Assert.Throws<NullReferenceException>(() => _unitOfWork.GetRepository<ILiquidRepository<AnotherTestEntity, int>, AnotherTestEntity, int>());
+        }
+
+        [Test]
+        public void GetRepository_WhenRepositoryExists_Success()
+        {
+            var serviceProvider = new ServiceCollection()
+                .AddTransient<ILiquidUnitOfWork, LiquidUnitOfWork>()
+                .AddScoped<ILiquidRepository<TestEntity, int>, InMemoryRepository<TestEntity, int>>()
+                .BuildServiceProvider();
+
+            var unitOfWorkWithRepository = new LiquidUnitOfWork(serviceProvider); 
+
+            Assert.IsInstanceOf<ILiquidRepository<TestEntity, int>>(unitOfWorkWithRepository.GetRepository<ILiquidRepository<TestEntity, int>, TestEntity, int>());
+
+            unitOfWorkWithRepository.Dispose();
         }
 
         [Test]
@@ -111,7 +117,7 @@ namespace Liquid.Repository.Mongo.Tests
 
             Assert.Null(result);
         }
-        
+
         [Test]
         public async Task RemoveByIdAsync_WhenCommitTransaction_ItemDeleted()
         {
@@ -174,6 +180,32 @@ namespace Liquid.Repository.Mongo.Tests
             var result = await _sut.FindByIdAsync(1242);
 
             Assert.AreEqual(_entity.Active, result.Active);
+        }
+
+        [Test]
+        public void StartTransactionAsync_WhenDataContextDoesntExists_ThrowException()
+        {
+            var serviceProvider = new ServiceCollection()
+                .AddTransient<ILiquidUnitOfWork, LiquidUnitOfWork>()
+                .BuildServiceProvider();
+
+            var unitOfWorkWithoutRepository = new LiquidUnitOfWork(serviceProvider);
+
+            Assert.ThrowsAsync<UnitofWorkTransactionWithoutRepositoryException>(async () => await unitOfWorkWithoutRepository.StartTransactionAsync());
+
+            unitOfWorkWithoutRepository.Dispose();
+        }
+
+        [Test]
+        public void CommitAsync_WhenNoTransactionIsStarted_ThrowException()
+        {
+            Assert.ThrowsAsync<UnitOfWorkTransactionNotStartedException>(async () => await _unitOfWork.CommitAsync());
+        }
+
+        [Test]
+        public void RollbackTransactionAsync_WhenNoTransactionIsStarted_ThrowException()
+        {
+            Assert.ThrowsAsync<UnitOfWorkTransactionNotStartedException>(async () => await _unitOfWork.RollbackTransactionAsync());
         }
     }
 }
